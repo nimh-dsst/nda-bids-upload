@@ -1,4 +1,5 @@
 from bids import BIDSLayout
+import bids
 from collections import defaultdict
 import re
 import json
@@ -10,8 +11,12 @@ from pathlib import Path
 
 class BIDStoNDAConfigGenerator:
     def __init__(self):
-        # fetch the 
-        parser = argparse.ArgumentParser(description='Prepare JSON and YAML files for a single dataset path.')
+        # TODO:
+        # add below in the command line args
+        # -d: destination folder where the yaml and json files need to be saved
+        # -s: source directory where the BIDS dataset is located
+        bids.config.set_option('extension_initial_dot', True)
+        parser = argparse.ArgumentParser(description='Process a dataset path.')
         parser.add_argument('dataset_path', type=str, help='The path to the dataset directory')
         args = parser.parse_args()
         self.path = args.dataset_path
@@ -82,7 +87,6 @@ class BIDStoNDAConfigGenerator:
             else:
                 sub_index = file_path.find('sub-')
         finalPath = '/'.join(self.path.split('/')[:-2]) + '/prepared_jsons'
-        print(finalPath)
         Path(finalPath).mkdir(parents=True, exist_ok=True)
         with open(f'{finalPath}/'+file_name, 'w') as f:
             json.dump(json_contents, f)
@@ -132,13 +136,20 @@ class BIDStoNDAConfigGenerator:
                         z = z + '_'
                     z = z + entities['suffix']
                 if z:
-                    Z.add(z)
+                    Z.add(z) 
             if not Z and entities['suffix'] != entities['datatype']:
                 Z.add(entities['suffix'])
         return list(Z)
 
     def prepare_file_names(self, X, Y, Z):
         file_names = defaultdict(set)
+        '''
+            file_names =  {
+                json: [],
+                yaml: []
+            }
+        '''
+
         filename = f"{self.A}_{X}"
         file_base = f"{filename}.{Y}."
         for z in Z:
@@ -172,9 +183,17 @@ class BIDStoNDAConfigGenerator:
                     self.prepare_json_contents(file)
                 for file in file_names['yaml']:
                     self.prepare_yaml_contents(file)
+        print()
+        print('Please check the following folders for the json and yaml files generated:')
+        print('JSON files: ' + '/'.join(self.path.split('/')[:-2]) + '/prepared_jsons')
+        print('YAML files: ' + '/'.join(self.path.split('/')[:-2]) + '/prepared_yamls')
+        print()
 
+# Instructions on how to use:
+# 1. Make sure you are in 'json_yaml_files' folder of the codebase
+# 2. Use the below command to run the script
+#   python3 prepare_files.py /Users/pbaba1/Downloads/NDA_Dataset/ds004733/
+# where '/Users/pbaba1/Downloads/NDA_Dataset/ds004733/' is the path where the BIDS dataset is located
 
-# Example usage:
-# path = '/Users/pbaba1/Downloads/NDA_Dataset/ds004733/'
 generator = BIDStoNDAConfigGenerator()
 generator.run()
