@@ -1,7 +1,7 @@
 
-## :mega: Repository No Longer Being Maintained :mega:
+## :mega: Repository No Longer Being Maintained by DCAN-Labs :mega:
 
-**We have adopted a new process for storing and sharing ABCD data and will therefore no longer be maintaining this repository!**
+**DCAN-Labs has adopted a new process for storing and sharing ABCD data and will therefore no longer be maintaining this repository!**
 
 
 # Welcome to the DCAN Labs NDA BIDS Upload Repository
