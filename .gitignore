@@ -4,6 +4,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+test_bids_datasets/
+.vscode/
+
 # C extensions
 *.so
 
