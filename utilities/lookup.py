@@ -4,11 +4,11 @@ import os
 import pandas
 import json
 from typing import Union
-
+from argparse import ArgumentParser
 
 class LookUpTable:
-    def __init__(self, path_to_bids_dataset: str, destination_path=""):
-        self.path_to_bids_dataset = str(path_to_bids_dataset)
+    def __init__(self, bids_dataset: str, destination_path=""):
+        self.path_to_bids_dataset = str(bids_dataset)
         self.bids_layout = bids.BIDSLayout(self.path_to_bids_dataset)
         self.destination_path = destination_path
         self.participants_tsv = pandas.DataFrame()
@@ -99,3 +99,12 @@ class LookUpTable:
         self.lookup_table.to_csv(
             self.destination_path, sep=",", na_rep="n/a", index=False
         )
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("bids_dataset", help="Path to bids dataset", type=pathlib.Path)
+    parser.add_argument("destination_path", help="Path to nda upload folder", type=pathlib.Path)
+    args = parser.parse_args()
+    lookup_table = LookUpTable(str(args.bids_dataset), destination_path=str(args.destination_path))
+    lookup_table.create_lookup_table()
+    lookup_table.write_lookup_table()

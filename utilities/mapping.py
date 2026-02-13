@@ -40,6 +40,7 @@ import json
 from copy import copy
 from typing import Union
 from pathlib import Path
+from argparse import ArgumentParser
 
 supported_bids_datatypes = ["anat", "pet"]
 
@@ -142,3 +143,11 @@ class MappingTemplator:
             )
             with open(yaml_path, "w") as outfile:
                 yaml.dump(templates[datatype], outfile)
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("bids_dataset", type=Path, help="BIDS directory to preprep for nda upload")
+    parser.add_argument("destination_path", type=Path, help="Destination directory to place lookup.csv, file mapper jsons, and nda yaml files")
+
+    args = parser.parse_args()
+    MappingTemplator(bids_dataset=args.bids_dataset, destination_path=args.destination_path)
