@@ -30,6 +30,8 @@ dependencies = [
 [project.scripts]
 nda-prepare = "prepare:main"
 nda-records = "records:cli"
+nda-lookup = "utilities.lookup:cli"
+nda-mapping = "utilities.mapping:cli"
 
 [project.urls]
 Homepage = "https://github.com/DCAN-Labs/nda-bids-upload"

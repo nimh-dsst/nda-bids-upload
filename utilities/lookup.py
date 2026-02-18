@@ -5,12 +5,18 @@ import pandas
 import json
 from typing import Union
 from argparse import ArgumentParser
+from math import floor
 
 class LookUpTable:
     def __init__(self, bids_dataset: str, destination_path=""):
         self.path_to_bids_dataset = str(bids_dataset)
         self.bids_layout = bids.BIDSLayout(self.path_to_bids_dataset)
-        self.destination_path = destination_path
+        if not destination_path:
+            self.destination_path = 'lookup.csv'
+        elif pathlib.Path(destination_path).is_dir():
+            self.destination_path = pathlib.Path(destination_path) / 'lookup.csv'
+        else:
+            self.destination_path = pathlib.Path(destination_path)
         self.participants_tsv = pandas.DataFrame()
         self.participants_json = None
         self.subject_list = self.bids_layout.get_subjects()
@@ -39,7 +45,11 @@ class LookUpTable:
                 with open(participants_json_path, "r") as infile:
                     self.participants_json = json.load(infile)
             except (FileExistsError, FileNotFoundError, json.JSONDecodeError) as err:
-                raise err
+                if err is json.JSONDecodeError:
+                    raise err
+                else:
+                    print(f"No participants.json file found.")
+                    self.participants_json = {}
 
 
         # convert ages from years to months per NDA requirements
@@ -79,15 +89,19 @@ class LookUpTable:
                     "subjectkey": "",
                     "src_subject_id": f"sub-{s}",
                     "interview_date": "",
-                    "interview_age": age_multiplier
-                    * float(self.participants_tsv["age"][f"sub-{s}"]),
+                    "interview_age": floor(age_multiplier
+                    * float(self.participants_tsv["age"][f"sub-{s}"])),
                     "sex": self.participants_tsv["sex"][f"sub-{s}"],
                     "datatype": ents.get("datatype", ""),
                 }
-                self.subject_session_list.append(info)
+                # We're ignoring folders that don't have a datatype for now as their
+                # contents are covered by folders that do have a datatype
+                if info.get('datatype'):
+                    self.subject_session_list.append(info)
+        
         self.lookup_table = pandas.DataFrame(self.subject_session_list)
 
-        return self.lookup_table
+        return self.lookup_table.drop_duplicates(inplace=True)
 
     def write_lookup_table(self):
         if self.lookup_table.empty:
@@ -96,7 +110,7 @@ class LookUpTable:
             self.destination_path, sep=",", na_rep="n/a", index=False
         )
 
-if __name__ == "__main__":
+def cli():
     parser = ArgumentParser()
     parser.add_argument("bids_dataset", help="Path to bids dataset", type=pathlib.Path)
     parser.add_argument("destination_path", help="Path to nda upload folder", type=pathlib.Path)
@@ -104,3 +118,6 @@ if __name__ == "__main__":
     lookup_table = LookUpTable(str(args.bids_dataset), destination_path=str(args.destination_path))
     lookup_table.create_lookup_table()
     lookup_table.write_lookup_table()
+
+if __name__ == "__main__":
+    cli()
