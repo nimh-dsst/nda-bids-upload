@@ -10,7 +10,7 @@ The full documentation lives here: [ndabids.readthedocs.io](https://ndabids.read
 
 ```bash
 # Clone the repository with submodules
-git clone --recursive https://github.com/DCAN-Labs/nda-bids-upload.git
+git clone --recursive https://github.com/nimh-dsst/nda-bids-upload.git
 cd nda-bids-upload
 
 # Install with uv (recommended)
@@ -24,13 +24,35 @@ For detailed installation instructions, see [INSTALL.md](INSTALL.md).
 
 ### Usage
 
-```bash
-# Prepare data for NDA upload
-python prepare.py -s <source_dir> -d <destination_dir>
+1. Create a lookup.csv file to map BIDS subject/sessions to NDA GUID's
 
-# Or use the installed command
-nda-prepare -s <source_dir> -d <destination_dir>
-```
+    ```bash
+    # Run the script directly
+    python -m utilities.lookup <source_dir> <destination_dir>
+
+    # Or use the installed command
+    nda-lookup <source_dir> <destination_dir>
+    ```
+
+2. Create file mapper json's and NDA Yaml files:
+
+    ```bash
+    # Run the script directly
+    python -m utilities.mapping <source_dir> <destination_dir>
+
+    # Or use the installed command
+    nda-mapping <source_dir> <destination_dir>
+    ```
+
+3. Use file mapper and nda manifests tool to create packages for uploading to NDA:
+
+    ```bash
+    # Prepare data for NDA upload
+    python prepare.py -s <source_dir> -d <destination_dir>
+
+    # Or use the installed command
+    nda-prepare -s <source_dir> -d <destination_dir>
+    ```
 
 ## Dependencies
 

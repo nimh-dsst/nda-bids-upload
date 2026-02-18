@@ -372,7 +372,7 @@ def cli(input):
             )
 
         for column in lookup_record:
-            if column != "bids_subject_session":
+            if column != "bids_subject_session" and column in header:
                 new_record[column] = lookup_record[column]
 
         records.append(new_record)
