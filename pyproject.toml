@@ -3,7 +3,7 @@ name = "nda-bids-upload"
 version = "0.0.0"
 description =  "NDA BIDS Upload Tool "
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "nimh-dsst", email = ""}
 ]
@@ -25,6 +25,7 @@ dependencies = [
     "file-mapper @ git+https://github.com/bendhouseart/file-mapper.git",
     "nda-tools",
     "pybids>=0.20.0",
+    "toga>=0.4.0",
 ]
 
 [project.scripts]

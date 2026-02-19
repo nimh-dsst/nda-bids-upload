@@ -34,6 +34,15 @@ For detailed installation instructions, see [INSTALL.md](INSTALL.md).
     nda-lookup <source_dir> <destination_dir>
     ```
 
+    If you have your GUID's ready and want to enter them immediately you can append the `--edit-now` flag to the above
+    command:
+
+    ```bash
+    nda-lookup <source_dir> <destination_dir> --edit-now
+    ```
+
+    ![image of lookup.csv editor](images/lookup_csv_editor.png)
+
 2. Create file mapper json's and NDA Yaml files:
 
     ```bash

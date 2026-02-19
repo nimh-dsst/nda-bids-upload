@@ -3,20 +3,23 @@ import pathlib
 import os
 import pandas
 import json
-from typing import Union
 from argparse import ArgumentParser
 from math import floor
+
 
 class LookUpTable:
     def __init__(self, bids_dataset: str, destination_path=""):
         self.path_to_bids_dataset = str(bids_dataset)
         self.bids_layout = bids.BIDSLayout(self.path_to_bids_dataset)
         if not destination_path:
-            self.destination_path = 'lookup.csv'
-        elif pathlib.Path(destination_path).is_dir():
-            self.destination_path = pathlib.Path(destination_path) / 'lookup.csv'
+            self.destination_path = "lookup.csv"
         else:
-            self.destination_path = pathlib.Path(destination_path)
+            dest_path = pathlib.Path(destination_path) 
+            if dest_path.suffix.lower() == '.csv':
+                self.destination_path = dest_path
+            else:
+                self.destination_path = pathlib.Path(destination_path) / "lookup.csv"
+        
         self.participants_tsv = pandas.DataFrame()
         self.participants_json = None
         self.subject_list = self.bids_layout.get_subjects()
@@ -51,10 +54,9 @@ class LookUpTable:
                     print(f"No participants.json file found.")
                     self.participants_json = {}
 
-
         # convert ages from years to months per NDA requirements
         age_multiplier = 12
-        
+
         # recast gender column and sidecar as sex if gender is present
         gender_col, sex_column = next(
             (
@@ -73,7 +75,9 @@ class LookUpTable:
         )
 
         if gender_col and not sex_column:
-            self.participants_tsv = self.participants_tsv.rename(columns={gender_col: "sex"})
+            self.participants_tsv = self.participants_tsv.rename(
+                columns={gender_col: "sex"}
+            )
             self.participants_json["sex"] = self.participants_json.pop(gender_col)
 
         # create a subject/session list
@@ -89,16 +93,17 @@ class LookUpTable:
                     "subjectkey": "",
                     "src_subject_id": f"sub-{s}",
                     "interview_date": "",
-                    "interview_age": floor(age_multiplier
-                    * float(self.participants_tsv["age"][f"sub-{s}"])),
+                    "interview_age": floor(
+                        age_multiplier * float(self.participants_tsv["age"][f"sub-{s}"])
+                    ),
                     "sex": self.participants_tsv["sex"][f"sub-{s}"],
                     "datatype": ents.get("datatype", ""),
                 }
                 # We're ignoring folders that don't have a datatype for now as their
                 # contents are covered by folders that do have a datatype
-                if info.get('datatype'):
+                if info.get("datatype"):
                     self.subject_session_list.append(info)
-        
+
         self.lookup_table = pandas.DataFrame(self.subject_session_list)
 
         return self.lookup_table.drop_duplicates(inplace=True)
@@ -106,18 +111,42 @@ class LookUpTable:
     def write_lookup_table(self):
         if self.lookup_table.empty:
             self.create_lookup_table()
+        # create output dir if it doesn't exist
+        self.destination_path.parent.mkdir(exist_ok=True)
         self.lookup_table.to_csv(
             self.destination_path, sep=",", na_rep="n/a", index=False
         )
+        return self.destination_path
+
 
 def cli():
     parser = ArgumentParser()
-    parser.add_argument("bids_dataset", help="Path to bids dataset", type=pathlib.Path)
-    parser.add_argument("destination_path", help="Path to nda upload folder", type=pathlib.Path)
+    parser.add_argument("bids_dataset", 
+    help="Path to BIDS dataset", 
+    type=pathlib.Path)
+    parser.add_argument(
+        "destination_path", 
+        help="Path to NDA upload folder", 
+        type=pathlib.Path
+    )
+    parser.add_argument(
+        "--edit-now",
+        action="store_true",
+        default=False,
+        help="Add interview dates and GUID's to lookup csv now",
+    )
     args = parser.parse_args()
-    lookup_table = LookUpTable(str(args.bids_dataset), destination_path=str(args.destination_path))
-    lookup_table.create_lookup_table()
-    lookup_table.write_lookup_table()
+    lookup_table = LookUpTable(
+        str(args.bids_dataset), destination_path=str(args.destination_path)
+    )
+    df = lookup_table.create_lookup_table()
+    lookup_table_path = lookup_table.write_lookup_table()
+
+    if args.edit_now:
+        from utilities.lookup_editor import run_lookup_editor
+
+        run_lookup_editor(pathlib.Path(lookup_table_path))
+
 
 if __name__ == "__main__":
     cli()
