@@ -7,10 +7,6 @@ paths under the destination (often NDA-style with {GUID}).
 Example (anat T1w, no session) from nda_ds004869 image03_sourcedata.anat.t1w.json:
 
     {
-        "CHANGES": "CHANGES",
-        "README": "README",
-        "dataset_description.json": "dataset_description.json",
-        "LICENSE": "LICENSE",
         "sub-{SUBJECT}/anat/sub-{SUBJECT}_T1w.nii.gz": "sub-{GUID}/anat/sub-{GUID}_T1w.nii.gz",
         "sub-{SUBJECT}/anat/sub-{SUBJECT}_T1w.json": "sub-{GUID}/anat/sub-{GUID}_T1w.json"
     }
@@ -18,10 +14,6 @@ Example (anat T1w, no session) from nda_ds004869 image03_sourcedata.anat.t1w.jso
 Example (PET with session) from nda_ds004869 image03_sourcedata.pet.pet.json:
 
     {
-        "CHANGES": "CHANGES",
-        "README": "README",
-        "dataset_description.json": "dataset_description.json",
-        "LICENSE": "LICENSE",
         "sub-{SUBJECT}/ses-{SESSION}/pet/sub-{SUBJECT}_ses-{SESSION}_pet.nii.gz": "sub-{GUID}/ses-{SESSION}/pet/sub-{GUID}_ses-{SESSION}_pet.nii.gz",
         "sub-{SUBJECT}/ses-{SESSION}/pet/sub-{SUBJECT}_ses-{SESSION}_pet.json": "sub-{GUID}/ses-{SESSION}/pet/sub-{GUID}_ses-{SESSION}_pet.json",
         "sub-{SUBJECT}/ses-{SESSION}/pet/sub-{SUBJECT}_ses-{SESSION}_recording-manual_blood.json": "sub-{GUID}/ses-{SESSION}/pet/sub-{GUID}_ses-{SESSION}_recording-manual_blood.json",
@@ -81,6 +73,38 @@ class MappingTemplator:
 
         self.create_jsons()
         self.create_yamls()
+        self.create_toplevel_json()
+        self.create_toplevel_yaml()
+
+    def create_toplevel_json(self):
+        """Create identity mapping for BIDS dataset top-level files only."""
+        root = Path(self.bids_dataset_path)
+        if not root.is_dir():
+            return
+        toplevel = {}
+        for p in root.iterdir():
+            if p.is_file():
+                name = p.name
+                toplevel[name] = name
+        if not toplevel:
+            return
+        out_path = Path(self.destination_path) / "image03_sourcedata.bids.toplevel.json"
+        with open(out_path, "w") as f:
+            json.dump(toplevel, f, indent=4)
+
+    def create_toplevel_yaml(self):
+        """Create content YAML for image03_sourcedata.bids.toplevel."""
+        template = {
+            "image_description": "bids toplevel",
+            "scan_type": "BIDS dataset metadata",
+            "scan_object": "Other",
+            "image_modality": "Other",
+            "transformation_performed": "No",
+            "image_file_format": "NIfTI",
+        }
+        out_path = Path(self.destination_path) / "image03_sourcedata.bids.toplevel.yaml"
+        with open(out_path, "w") as f:
+            yaml.dump(template, f)
 
     def populate_subject_mappings(self):
         for subject, datatype in self.subject_mappings.items():
@@ -91,6 +115,38 @@ class MappingTemplator:
                 ]
 
     def aggregate_mappings(self):
+        """
+        Collects ever bids subject/session and organizes them by subject, datatype,
+        and file. These set of unique bids file paths will be used to create the 
+        jsons for filemapper to symlink the nda datastructure from the BIDS dataset.
+
+        For subject sub-example with a set of pet images will return the following:
+        Transforms self.subject_mappings ->
+        {
+            'example': {
+                'pet': [
+                    'sub-example_session-a_pet.nii.gz',
+                    'sub-example_session-a_pet.json',
+                ],
+                'anat': [
+                    'sub-example_T1w.nii.gz',
+                    'sub-example_T1w.json'
+                ]
+            }
+        }
+
+        To
+
+        self.finished_product = {
+            'anat': {
+                'sub-{SUBJECT}/anat/sub-{SUBJECT}_T1w.nii.gz': 'sub-{GUID}/anat/sub-{GUID}_T1w.nii.gz',
+                'sub-{SUBJECT}/anat/sub-{SUBJECT}_T1w.json': 'sub-{GUID}/anat/sub-{GUID}_T1w.json'
+            },
+            'pet': {
+                'sub-{SUBJECT}/ses-{SESSION}/pet/sub-{SUBJECT}_ses-{SESSION}_pet.nii.gz': 'sub-{GUID}/ses-{SESSION}/pet/...'
+            }
+        }
+        """
         for subject, datatype in self.subject_mappings.items():
             for d in datatype.keys():
                 self.general_mappings[d].extend(self.subject_mappings[subject][d])

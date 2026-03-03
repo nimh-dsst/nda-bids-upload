@@ -1,4 +1,4 @@
-# Welcome to the DCAN Labs NDA BIDS Upload Repository
+# Welcome to the NIMH DSST NDA BIDS Upload Repository
 
 This repository is for taking data as BIDS and uploading it to an NDA collection.
 
@@ -52,6 +52,10 @@ For detailed installation instructions, see [INSTALL.md](INSTALL.md).
     # Or use the installed command
     nda-mapping <source_dir> <destination_dir>
     ```
+
+    This produces mapper JSONs and YAMLs per BIDS datatype (e.g. anat, pet) and also
+    **image03_sourcedata.bids.toplevel** (top-level BIDS files only: README, dataset_description.json,
+    participants.tsv, etc.) for NDA image03 upload.
 
 3. Use file mapper and nda manifests tool to create packages for uploading to NDA:
 
