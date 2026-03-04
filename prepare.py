@@ -133,147 +133,168 @@ def filemap_and_recordsprep(dest_dir, source_dir, skip):
         import json
 
         for filename in os.listdir(dest_dir):
-            if filename.endswith(".json"):
-                # Load and analyze JSON to determine if sessions are needed
-                json_file_path = os.path.join(dest_dir, filename)
-                with open(json_file_path, "r") as infile:
-                    json_data = json.load(infile)
-                    print(json_data)
+            if not filename.endswith(".json"):
+                continue
+            json_file_path = os.path.join(dest_dir, filename)
+            with open(json_file_path, "r") as infile:
+                json_data = json.load(infile)
+            print(json_data)
 
-                # Check if any path in the JSON contains session template
-                requires_sessions = any(
-                    "ses-{SESSION}" in str(value) for value in json_data.values()
-                )
-                print(f"JSON {filename} requires sessions: {requires_sessions}")
-
-                # Filter lookup entries based on session requirement
-                filtered_lookup = []
-                for entry in lookup:
-                    sub_ses = entry["bids_subject_session"]
-                    has_session = "_ses-" in sub_ses
-
-                    if requires_sessions and has_session:
-                        filtered_lookup.append(entry)
-                    elif not requires_sessions and not has_session:
-                        filtered_lookup.append(entry)
-
-                print(
-                    f"Filtered lookup entries: {len(filtered_lookup)} out of {len(lookup)}"
-                )
-
-                # creating the parent and child directory for the files to get mapped to
+            # BIDS toplevel: one folder, no subject/session; symlink top-level files only
+            if filename == "image03_sourcedata.bids.toplevel.json":
                 parent_name = filename.rstrip(".json")
                 parent_dir = os.path.join(dest_dir, parent_name)
-                parent_head, parent_tail = parent_name.split("_", 1)
+                os.makedirs(parent_dir, exist_ok=True)
+                child_dir = os.path.join(parent_dir, "toplevel.sourcedata.bids.toplevel")
+                os.makedirs(child_dir, exist_ok=True)
+                for key in json_data:
+                    if "{" in key or "{" in str(json_data.get(key, "")):
+                        continue
+                    src = os.path.join(source_dir, key)
+                    dst = os.path.join(child_dir, key)
+                    if os.path.isfile(src):
+                        if os.path.lexists(dst):
+                            os.remove(dst)
+                        os.symlink(os.path.abspath(src), dst)
+                print("Starting " + parent_name + " file-mapping (toplevel)")
+                continue
 
-                print("Starting " + parent_name + " file-mapping")
+            # Check if any path in the JSON contains session template
+            requires_sessions = any(
+                "ses-{SESSION}" in str(value) for value in json_data.values()
+            )
+            print(f"JSON {filename} requires sessions: {requires_sessions}")
 
-                for i in range(len(filtered_lookup)):
-                    sub_ses = filtered_lookup[i]["bids_subject_session"]
-                    guid = filtered_lookup[i].get("subjectkey", "").replace("_", "")
+            # Filter lookup entries based on session requirement
+            filtered_lookup = []
+            for entry in lookup:
+                sub_ses = entry["bids_subject_session"]
+                has_session = "_ses-" in sub_ses
 
-                    if ("_" in sub_ses) and ("_ses-" not in sub_ses):
-                        print(
-                            'Improperly formatted "bids_subject_session": '
-                            + sub_ses
-                            + '. Requires "_ses-" between subject and session. Exiting.'
-                        )
-                        sys.exit(7)
+                if requires_sessions and has_session:
+                    filtered_lookup.append(entry)
+                elif not requires_sessions and not has_session:
+                    filtered_lookup.append(entry)
 
-                    char_count = sub_ses.count("_")
-                    if char_count > 1:
-                        print(
-                            'Improperly formatted "bids_subject_session": '
-                            + sub_ses
-                            + '. Requires no more than one "_" (underscore). Exiting.'
-                        )
-                        sys.exit(8)
+            print(
+                f"Filtered lookup entries: {len(filtered_lookup)} out of {len(lookup)}"
+            )
 
-                    if "_ses-" in sub_ses:
-                        bids_subject, bids_session = sub_ses.split("_")
-                        subject = bids_subject.lstrip("sub-")
-                        session = bids_session.lstrip("ses-")
-                        subject_and_session_flag = True
-                    else:
-                        bids_subject = sub_ses
-                        subject = bids_subject.lstrip("sub-")
-                        subject_and_session_flag = False
+            # creating the parent and child directory for the files to get mapped to
+            parent_name = filename.rstrip(".json")
+            parent_dir = os.path.join(dest_dir, parent_name)
+            parent_head, parent_tail = parent_name.split("_", 1)
 
-                    if subject_and_session_flag:
-                        child_dir = os.path.join(
-                            parent_dir,
-                            "sub-" + guid + "_" + bids_session + "." + parent_tail,
-                        )
-                    else:
-                        child_dir = os.path.join(
-                            parent_dir, "sub-" + guid + "." + parent_tail
-                        )
+            print("Starting " + parent_name + " file-mapping")
 
-                    if os.path.isdir(parent_dir):
-                        try:
-                            os.mkdir(child_dir)
-                        except FileExistsError:
-                            print(child_dir + " exists")
+            for i in range(len(filtered_lookup)):
+                sub_ses = filtered_lookup[i]["bids_subject_session"]
+                guid = filtered_lookup[i].get("subjectkey", "").replace("_", "")
 
-                    if not os.path.isdir(child_dir):
-                        try:
-                            os.makedirs(child_dir)
-                        except FileExistsError:
-                            print(child_dir + " exists")
+                if ("_" in sub_ses) and ("_ses-" not in sub_ses):
+                    print(
+                        'Improperly formatted "bids_subject_session": '
+                        + sub_ses
+                        + '. Requires "_ses-" between subject and session. Exiting.'
+                    )
+                    sys.exit(7)
 
-                    # calling the file mapper function directly
-                    print("Preparing " + bids_subject)
+                char_count = sub_ses.count("_")
+                if char_count > 1:
+                    print(
+                        'Improperly formatted "bids_subject_session": '
+                        + sub_ses
+                        + '. Requires no more than one "_" (underscore). Exiting.'
+                    )
+                    sys.exit(8)
 
-                    # creating the template string for the file mapper
-                    if subject_and_session_flag:
-                        template = f"SUBJECT={subject},SESSION={session},GUID={guid}"
-                    else:
-                        template = f"SUBJECT={subject},GUID={guid}"
+                if "_ses-" in sub_ses:
+                    bids_subject, bids_session = sub_ses.split("_")
+                    subject = bids_subject.lstrip("sub-")
+                    session = bids_session.lstrip("ses-")
+                    subject_and_session_flag = True
+                else:
+                    bids_subject = sub_ses
+                    subject = bids_subject.lstrip("sub-")
+                    subject_and_session_flag = False
 
-                    # Call the file mapper function directly
+                if subject_and_session_flag:
+                    child_dir = os.path.join(
+                        parent_dir,
+                        "sub-" + guid + "_" + bids_session + "." + parent_tail,
+                    )
+                else:
+                    child_dir = os.path.join(
+                        parent_dir, "sub-" + guid + "." + parent_tail
+                    )
+
+                if os.path.isdir(parent_dir):
                     try:
-                        process_json_file(
-                            json_file=os.path.join(dest_dir, filename),
-                            sourcepath=source_dir,
-                            destpath=child_dir,
-                            template=template,
-                            action="symlink",
-                            overwrite=False,
-                            testdebug=False,
-                            verbose=True,
-                            relsym=False,
-                            sidecars=False,
-                            skip_errors=False,
-                        )
-                    except Exception as e:
+                        os.mkdir(child_dir)
+                    except FileExistsError:
+                        print(child_dir + " exists")
+
+                if not os.path.isdir(child_dir):
+                    try:
+                        os.makedirs(child_dir)
+                    except FileExistsError:
+                        print(child_dir + " exists")
+
+                # calling the file mapper function directly
+                print("Preparing " + bids_subject)
+
+                # creating the template string for the file mapper
+                if subject_and_session_flag:
+                    template = f"SUBJECT={subject},SESSION={session},GUID={guid}"
+                else:
+                    template = f"SUBJECT={subject},GUID={guid}"
+
+                # Call the file mapper function directly
+                try:
+                    process_json_file(
+                        json_file=os.path.join(dest_dir, filename),
+                        sourcepath=source_dir,
+                        destpath=child_dir,
+                        template=template,
+                        action="symlink",
+                        overwrite=False,
+                        testdebug=False,
+                        verbose=False,
+                        relsym=False,
+                        sidecars=False,
+                        skip_errors=False,
+                    )
+                except Exception as e:
+                    if "File exists" in str(e):
+                        pass
+                    else:
                         print(f"Error processing {bids_subject}: {e}")
-                        continue
+                    continue
 
-                    # if FM_cmd failed
-                    if not os.path.isdir(child_dir):
-                        # go to the next iteration of this loop and skip below lines
-                        continue
+                # if FM_cmd failed
+                if not os.path.isdir(child_dir):
+                    # go to the next iteration of this loop and skip below lines
+                    continue
 
-                    child_check = False
+                child_check = False
+                for child_content in os.listdir(child_dir):
+                    content_path = os.path.join(child_dir, child_content)
+                    if os.path.isdir(content_path):
+                        child_check = True
+                        break
+
+                # Delete if content not found
+                if child_check == False:
                     for child_content in os.listdir(child_dir):
                         content_path = os.path.join(child_dir, child_content)
-                        if os.path.isdir(content_path):
-                            child_check = True
-                            break
-
-                    # Delete if content not found
-                    if child_check == False:
-                        for child_content in os.listdir(child_dir):
-                            content_path = os.path.join(child_dir, child_content)
-                            os.remove(content_path)
-                        os.rmdir(child_dir)
+                        os.remove(content_path)
+                    os.rmdir(child_dir)
 
     print("DATA PREPARED.  ATTEMPTING RECORDS PREPARATION.")
 
     for filename in os.listdir(dest_dir):
         if filename.endswith(".json"):
 
-            
             # creating the parent and child directory for the files to get mapped to
             parent_name = filename.rstrip(".json")
             parent_dir = os.path.join(dest_dir, parent_name)

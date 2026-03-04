@@ -3,7 +3,7 @@ name = "nda-bids-upload"
 version = "0.0.0"
 description =  "NDA BIDS Upload Tool "
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "nimh-dsst", email = ""}
 ]
@@ -20,15 +20,19 @@ classifiers = [
 ]
 dependencies = [
     "mkdocs-material>=9.0.0",
-    "PyYAML>=6.0",
+    "pyyaml>=6.0",
     "pandas>=1.5.0",
     "file-mapper @ git+https://github.com/bendhouseart/file-mapper.git",
     "nda-tools",
+    "pybids>=0.20.0",
+    "toga>=0.4.0",
 ]
 
 [project.scripts]
 nda-prepare = "prepare:main"
 nda-records = "records:cli"
+nda-lookup = "utilities.lookup:cli"
+nda-mapping = "utilities.mapping:cli"
 
 [project.urls]
 Homepage = "https://github.com/DCAN-Labs/nda-bids-upload"
@@ -69,9 +73,48 @@ include = [
 [tool.uv]
 dev-dependencies = [
     "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
+    "ipython>=8.18.1",
 ]
 
 [tool.uv.sources]
 file-mapper = {git = "https://github.com/bendhouseart/file-mapper.git", branch = "main"}
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.31.0",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "*/bids-examples/*",
+    "*/examples/*",
+    "manifest-data/*",
+    "manifest-data/**/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+show_missing = true
+skip_covered = false
+precision = 2
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=. --cov-report=term-missing --cov-report=html"
