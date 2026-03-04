@@ -205,3 +205,6 @@ __marimo__/
 
 # ignore _build dir
 _build/
+
+# ignore bids examples
+tests/bids-examples/**/*

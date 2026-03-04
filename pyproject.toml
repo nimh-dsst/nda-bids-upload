@@ -39,6 +39,10 @@ Repository = "https://github.com/DCAN-Labs/nda-bids-upload"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
+
 [tool.hatch.metadata]
 allow-direct-references = true
 
