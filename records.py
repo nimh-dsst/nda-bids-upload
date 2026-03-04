@@ -71,7 +71,7 @@ def records_sanity_check(input):
 
     dest_dir = os.path.dirname(parent)
     lookup_csv = os.path.join(dest_dir, "lookup.csv")
-    manifest_script = os.path.join(dest_dir, "manifest-data", "nda_manifests.py")
+    manifest_script = os.path.join(HERE, "manifest-data", "nda_manifests.py")
 
     # check if manifest_script exists
     if not os.path.isfile(manifest_script):
@@ -131,10 +131,13 @@ def records_sanity_check(input):
         sys.exit(7)
 
     problem_child_flag = False
+    is_bids_toplevel = basename == "image03_sourcedata.bids.toplevel"
 
     for root, dirs, files in os.walk(parent):
         if root == parent:
             for directory in dirs:
+                if is_bids_toplevel and directory == "toplevel.sourcedata.bids.toplevel":
+                    continue
                 if not directory.startswith("sub-NDAR"):
                     problem_child_flag = True
                     print(
@@ -212,7 +215,7 @@ def cli(input):
     # setting easy use variables from argparse
     parent = os.path.abspath(os.path.realpath(input))
     dest_dir = os.path.dirname(parent)
-    manifest_script = os.path.join(dest_dir, "manifest-data", "nda_manifests.py")
+    manifest_script = os.path.join(HERE, "manifest-data", "nda_manifests.py")
     lookup_csv = os.path.join(dest_dir, "lookup.csv")
 
     # grab parent's basename
@@ -272,8 +275,16 @@ def cli(input):
         ndar_to_bids_mapping[ndar_guid] = row["bids_subject_session"]
 
     ### DO WORK ###
+
+    # get original working dir (just to not break things)
+    original_working_dir = os.getcwd()
+
+    # change into parent directory get get relative paths
+    os.chdir(parent)
+
     # 1. GLOB all .../ndastructure_type.class.subset/sub-subject_ses-session.type.class.subset/ folders
-    uploads = glob(os.path.join(parent, "*.*.*.*"))
+    uploads = glob("*.*.*.*")
+    # uploads = glob(os.path.join(parent, "*.*.*.*"))
     print(f"parent: {parent}, uploads: {uploads}")
     # 2. loop over the folders
     print(f"{datetime.now()} Creating NDA records")
@@ -290,38 +301,42 @@ def cli(input):
             "."
         )
 
-        # Extract NDAR GUID from the folder name (e.g., "sub-NDAR123456_ses-baseline" -> "NDAR123456")
-        if bids_subject_session.startswith("sub-"):
-            ndar_guid = bids_subject_session[4:]  # Remove "sub-" prefix
-            if "_ses-" in ndar_guid:
-                ndar_guid = ndar_guid.split("_ses-")[0]  # Remove session part
+        # BIDS toplevel: single folder, use first lookup row and top-level-only manifest
+        if basename == "image03_sourcedata.bids.toplevel":
+            lookup_record = lookup[0] if lookup else {}
+            manifest = Manifest()
+            manifest.create_from_dir(upload_dir, top_level_only=True)
         else:
-            ndar_guid = bids_subject_session
+            # Extract NDAR GUID from the folder name (e.g., "sub-NDAR123456_ses-baseline" -> "NDAR123456")
+            if bids_subject_session.startswith("sub-"):
+                ndar_guid = bids_subject_session[4:]  # Remove "sub-" prefix
+                if "_ses-" in ndar_guid:
+                    ndar_guid = ndar_guid.split("_ses-")[0]  # Remove session part
+            else:
+                ndar_guid = bids_subject_session
 
-        # Look up the corresponding BIDS subject session using the mapping
-        if ndar_guid in ndar_to_bids_mapping:
-            corresponding_bids_subject_session = ndar_to_bids_mapping[ndar_guid]
-        else:
-            print(f"Warning: No mapping found for NDAR GUID: {ndar_guid}")
-            continue
+            # Look up the corresponding BIDS subject session using the mapping
+            if ndar_guid in ndar_to_bids_mapping:
+                corresponding_bids_subject_session = ndar_to_bids_mapping[ndar_guid]
+            else:
+                print(f"Warning: No mapping found for NDAR GUID: {ndar_guid}")
+                continue
 
-        record_found = False
-        for row in lookup:
-            if row["bids_subject_session"] == corresponding_bids_subject_session:
-                lookup_record = row
-                record_found = True
-                break
+            record_found = False
+            for row in lookup:
+                if row["bids_subject_session"] == corresponding_bids_subject_session:
+                    lookup_record = row
+                    record_found = True
+                    break
 
-        if not record_found:
-            print(
-                f"Warning: No lookup record found for BIDS subject session: {corresponding_bids_subject_session}"
-            )
-            continue
+            if not record_found:
+                print(
+                    f"Warning: No lookup record found for BIDS subject session: {corresponding_bids_subject_session}"
+                )
+                continue
 
-        # nda-manifest each folder
-
-        manifest = Manifest()
-        manifest.create_from_dir(upload_dir)
+            manifest = Manifest()
+            manifest.create_from_dir(upload_dir)
         manifest.output_as_file(
             os.path.join(upload_dir, f"{bids_subject_session}.manifest.json")
         )
@@ -364,11 +379,13 @@ def cli(input):
             )
 
         for column in lookup_record:
-            if column != "bids_subject_session":
+            if column != "bids_subject_session" and column in header:
                 new_record[column] = lookup_record[column]
 
         records.append(new_record)
         folders.append(upload_dir)
+
+    os.chdir(original_working_dir)
 
     with open(parent + ".complete_records.csv", "w") as f:
         f.write(ndaheader + "\n")
@@ -426,7 +443,8 @@ def cli(input):
             f"Files prepped at {input} with {parent}.complete_records.csv are invalid, run\n"
             f"vtcdm {input}.complete_records.csv -m {input} --verbose\n"
             f"for more details on how to fix"
-            )
+        )
+
 
 # Usage:
 # run_vtcmd('image03_sourcedata.pet.pet.complete_records.csv', 'image03_sourcedata.pet.pet/')

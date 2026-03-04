@@ -1,3 +1,6 @@
 [submodule "manifest-data"]
 	path = manifest-data
 	url = https://github.com/NDAR/manifest-data.git
+[submodule "bids-examples"]
+	path = bids-examples
+	url = https://github.com/bids-standard/bids-examples.git
