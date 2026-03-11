@@ -181,7 +181,7 @@ class MappingTemplator:
                 "scan_object": "Live",
                 "image_modality": "MRI",
                 "transformation_performed": "No",
-                "image_file_format": "DICOM",
+                "image_file_format": "NIFTI",
             },
             "pet": {
                 "image_description": "PET",
@@ -189,7 +189,7 @@ class MappingTemplator:
                 "scan_object": "Live",
                 "image_modality": "PET",
                 "transformation_performed": "No",
-                "image_file_format": "DICOM",
+                "image_file_format": "NIFTI",
             },
         }
 

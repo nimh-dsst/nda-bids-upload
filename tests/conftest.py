@@ -10,16 +10,16 @@ import pandas as pd
 import pytest
 
 GUIDS = [
-    'NDAR_INVCF394YBD',
-    'NDAR_INVVL685VY9',
-    'NDAR_INVAL430AUP',
-    'NDAR_INVBP115MEP',
-    'NDAR_INVRG747YLF',
-    'NDAR_INVMM568GH7',
-    'NDAR_INVHH455BJ4',
-    'NDAR_INVJF572MVK',
-    'NDAR_INVMX897ZJD',
-    'NDAR_INVKF926DLD'
+    'NDARINVCF394YBD',
+    'NDARINVVL685VY9',
+    'NDARINVAL430AUP',
+    'NDARINVBP115MEP',
+    'NDARINVRG747YLF',
+    'NDARINVMM568GH7',
+    'NDARINVHH455BJ4',
+    'NDARINVJF572MVK',
+    'NDARINVMX897ZJD',
+    'NDARINVKF926DLD'
     ]
 
 # Hardcoded participants (pet002-style). TSV is written via pandas for readability.
