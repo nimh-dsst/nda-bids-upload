@@ -18,6 +18,8 @@ Usage:
 
 import argparse
 import importlib.util
+import json
+import random
 import shutil
 import subprocess
 import tempfile
@@ -117,6 +119,63 @@ def _filter_and_write_participants_tsv(
     filtered.to_csv(dest_tsv, sep="\t", index=False)
 
 
+def _ensure_participants_age(dataset_dir: Path) -> None:
+    """
+    Add an age column to participants.tsv if missing (values 1–100).
+    If age was added, update participants.json with the age field schema.
+    """
+    tsv_path = dataset_dir / "participants.tsv"
+    json_path = dataset_dir / "participants.json"
+    if not tsv_path.is_file():
+        return
+    df = pd.read_csv(tsv_path, sep="\t", dtype=str)
+    if "age" in df.columns:
+        return
+    n = len(df)
+    df["age"] = [str(random.randint(1, 100)) for _ in range(n)]
+    df.to_csv(tsv_path, sep="\t", index=False)
+    if not json_path.is_file():
+        return
+    with open(json_path) as f:
+        meta = json.load(f)
+    meta["age"] = {
+        "Description": "age of the participant",
+        "Units": "year",
+    }
+    with open(json_path, "w") as f:
+        json.dump(meta, f, indent=2)
+
+
+def _ensure_participants_sex(dataset_dir: Path) -> None:
+    """
+    Add a sex column to participants.tsv if missing (values M or F at random).
+    If sex was added, update participants.json with the sex field schema.
+    """
+    tsv_path = dataset_dir / "participants.tsv"
+    json_path = dataset_dir / "participants.json"
+    if not tsv_path.is_file():
+        return
+    df = pd.read_csv(tsv_path, sep="\t", dtype=str)
+    if "sex" in df.columns:
+        return
+    n = len(df)
+    df["sex"] = [random.choice(["M", "F"]) for _ in range(n)]
+    df.to_csv(tsv_path, sep="\t", index=False)
+    if not json_path.is_file():
+        return
+    with open(json_path) as f:
+        meta = json.load(f)
+    meta["sex"] = {
+        "Description": "sex of the participant as reported by the participant",
+        "Levels": {
+            "M": "male",
+            "F": "female",
+        },
+    }
+    with open(json_path, "w") as f:
+        json.dump(meta, f, indent=2)
+
+
 def _dataset_roots(bids_root: Path) -> list[Path]:
     """Return main dataset root and each derivative pipeline root."""
     roots = [bids_root]
@@ -184,7 +243,7 @@ def _run_nda_lookup(
     lut.write_lookup_table()
 
 
-def reduce_bids(
+def ndaify_participants_files(
     input_bids_root: str | Path,
     output_bids_root: str | Path,
     max_participants: int = 10,
@@ -266,6 +325,8 @@ def reduce_bids(
             dest_tsv = reduced_root / rel
             if dest_tsv.exists():
                 _filter_and_write_participants_tsv(participants_tsv, dest_tsv, keep_ids)
+                _ensure_participants_age(dest_tsv.parent)
+                _ensure_participants_sex(dest_tsv.parent)
 
         _run_bids_validator(reduced_root, config_path)
 

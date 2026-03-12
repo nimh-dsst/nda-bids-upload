@@ -32,7 +32,7 @@ if __name__ != "__main__":
     _tests_dir = Path(__file__).resolve().parent
     if str(_tests_dir) not in sys.path:
         sys.path.insert(0, str(_tests_dir))
-from reduce_bids_participants import reduce_bids
+
 
 
 def _project_root() -> Path:
@@ -104,6 +104,10 @@ def test_pet002_example_present(bids_examples_available):
 
 def test_lookup_table_per_bids_dataset(bids_examples_available):
     """Per dataset: temp folder -> reduce -> lookup on reduced -> update lookup.csv with GUIDs/dates; assert success."""
+    from populate_bids_participants import ndaify_participants_files
+    from utilities.mapping import MappingTemplator
+    from prepare import input_check, filemap_and_recordsprep
+
     # 1. Collect list of folders from bids-examples
     root = bids_examples_available
     datasets = list(_bids_dataset_dirs(root))
@@ -117,10 +121,16 @@ def test_lookup_table_per_bids_dataset(bids_examples_available):
             target_path = Path(tmp)
             # 3. Run reduce_bids_participants on this dataset; target path is within the temp folder.
             #    (This reduces the dataset and writes the reduced BIDS tree into target_path.)
-            reduce_bids(dataset_path, target_path, max_participants=10)
+            ndaify_participants_files(dataset_path, target_path, max_participants=10)
             # 4. Lookup table was created on the newly reduced dataset (inside reduce_bids).
             # 5. lookup.csv was updated with conftest GUIDS and generated interview dates (inside reduce_bids).
             assert (target_path / "upload" / "lookup.csv").is_file(), (
                 f"dataset {name}: expected lookup.csv after reduce + lookup"
             )
+            # 6. Generate file mapping
+            mapping = MappingTemplator(dataset_path, target_path)
+            # 7. Run prepare.py
+            dest_dir, manifest_script, source_dir, skip, = input_check()
+            filemap_and_recordsprep(dest_dir, source_dir, skip)
+
 
