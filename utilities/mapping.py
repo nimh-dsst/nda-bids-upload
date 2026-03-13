@@ -161,6 +161,7 @@ class MappingTemplator:
             }
 
     def create_jsons(self):
+        _file_names = []
         for datatype, mapper_json in self.finished_product.items():
             file_name = (
                 Path(self.destination_path)
@@ -169,6 +170,8 @@ class MappingTemplator:
             )
             with open(file_name, "w") as outfile:
                 json.dump(mapper_json, outfile, indent=4)
+            _file_names.append(file_name)
+        return _file_names
 
     def create_yamls(self):
         templates = {
@@ -178,7 +181,7 @@ class MappingTemplator:
                 "scan_object": "Live",
                 "image_modality": "MRI",
                 "transformation_performed": "No",
-                "image_file_format": "DICOM",
+                "image_file_format": "NIFTI",
             },
             "pet": {
                 "image_description": "PET",
@@ -186,10 +189,11 @@ class MappingTemplator:
                 "scan_object": "Live",
                 "image_modality": "PET",
                 "transformation_performed": "No",
-                "image_file_format": "DICOM",
+                "image_file_format": "NIFTI",
             },
         }
 
+        _yaml_paths = []
         for datatype in self.datatypes:
             # build path to save yaml to
             yaml_path = (
@@ -199,6 +203,8 @@ class MappingTemplator:
             )
             with open(yaml_path, "w") as outfile:
                 yaml.dump(templates[datatype], outfile)
+                _yaml_paths.append(yaml_path)
+        return _yaml_paths
 
 def cli():
     parser = ArgumentParser()

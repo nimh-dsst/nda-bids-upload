@@ -9,10 +9,23 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+GUIDS = [
+    'NDARINVCF394YBD',
+    'NDARINVVL685VY9',
+    'NDARINVAL430AUP',
+    'NDARINVBP115MEP',
+    'NDARINVRG747YLF',
+    'NDARINVMM568GH7',
+    'NDARINVHH455BJ4',
+    'NDARINVJF572MVK',
+    'NDARINVMX897ZJD',
+    'NDARINVKF926DLD'
+    ]
+
 # Hardcoded participants (pet002-style). TSV is written via pandas for readability.
 PARTICIPANTS_DATA = [
-    {"participant_id": "sub-01", "height": 163.5, "weight": 51, "age": 21.5086, "gender": "F"},
-    {"participant_id": "sub-02", "height": 170, "weight": 51.2, "age": 20.7255, "gender": "F"},
+    {"participant_id": "sub-01", "height": 163.5, "weight": 51, "age": 21, "gender": "F"},
+    {"participant_id": "sub-02", "height": 170, "weight": 51.2, "age": 20, "gender": "F"},
 ]
 
 PARTICIPANTS_JSON = {
@@ -25,16 +38,16 @@ PARTICIPANTS_JSON = {
 
 # Same ages in months (for Units: "months" → multiplier 1)
 PARTICIPANTS_DATA_MONTHS = [
-    {"participant_id": "sub-01", "height": 163.5, "weight": 51, "age": 21.5086 * 12, "gender": "F"},
-    {"participant_id": "sub-02", "height": 170, "weight": 51.2, "age": 20.7255 * 12, "gender": "F"},
+    {"participant_id": "sub-01", "height": 163.5, "weight": 51, "age": 21, "gender": "F"},
+    {"participant_id": "sub-02", "height": 170, "weight": 51.2, "age": 20, "gender": "F"},
 ]
 PARTICIPANTS_JSON_MONTHS = copy.deepcopy(PARTICIPANTS_JSON)
-PARTICIPANTS_JSON_MONTHS["age"]["Units"] = "months"
+#PARTICIPANTS_JSON_MONTHS["age"]["Units"] = "months"
 
 # Same ages in weeks (for Units: "weeks" → multiplier 1/4 to get months)
 PARTICIPANTS_DATA_WEEKS = [
-    {"participant_id": "sub-01", "height": 163.5, "weight": 51, "age": 21.5086 * 52, "gender": "F"},
-    {"participant_id": "sub-02", "height": 170, "weight": 51.2, "age": 20.7255 * 52, "gender": "F"},
+    {"participant_id": "sub-01", "height": 163.5, "weight": 51, "age": 21 * 52, "gender": "F"},
+    {"participant_id": "sub-02", "height": 170, "weight": 51.2, "age": 20 * 52, "gender": "F"},
 ]
 PARTICIPANTS_JSON_WEEKS = copy.deepcopy(PARTICIPANTS_JSON)
 PARTICIPANTS_JSON_WEEKS["age"]["Units"] = "weeks"

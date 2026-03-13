@@ -335,8 +335,8 @@ def cli(input):
                 )
                 continue
 
-            manifest = Manifest()
-            manifest.create_from_dir(upload_dir)
+        manifest = Manifest()
+        manifest.create_from_dir(upload_dir)
         manifest.output_as_file(
             os.path.join(upload_dir, f"{bids_subject_session}.manifest.json")
         )
@@ -346,7 +346,13 @@ def cli(input):
         manifest_json_path = os.path.join(
             upload_dir, f"{bids_subject_session}.manifest.json"
         )
-        manifest_json_relative_path = os.path.relpath(manifest_json_path, input)
+        # Use the absolute parent directory as the base for relative
+        # paths so that the manifest column matches the original
+        # working_directory behavior (e.g.,
+        # "sub-NDAR.../sub-NDAR....manifest.json") and does not
+        # include unnecessary "../" segments when the CLI is invoked
+        # with a relative -p argument.
+        manifest_json_relative_path = os.path.relpath(manifest_json_path, parent)
         try:
             with open(manifest_json_path, "r") as f:
                 manifest_content = f.read()
