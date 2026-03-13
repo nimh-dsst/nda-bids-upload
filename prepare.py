@@ -112,7 +112,10 @@ def input_check():
         )
         sys.exit(6)
 
-    source_dir = args.source_dir.rstrip("/")
+    # Always work with an absolute source path so that filemapper
+    # creates symlinks that point to real, stable locations even when
+    # prepare.py is run from different working directories.
+    source_dir = os.path.abspath(args.source_dir.rstrip("/"))
 
     return dest_dir, manifest_script, source_dir, args.skip
 
