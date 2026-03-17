@@ -164,7 +164,7 @@ def filemap_and_recordsprep(dest_dir, source_dir, skip):
 
             # Check if any path in the JSON contains session template
             requires_sessions = any(
-                "ses-{SESSION}" in str(value) for value in json_data.values()
+                "ses-" in str(value) for value in json_data.values()
             )
             print(f"JSON {filename} requires sessions: {requires_sessions}")
 

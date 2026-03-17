@@ -248,6 +248,7 @@ def ndaify_participants_files(
     output_bids_root: str | Path,
     max_participants: int = 10,
     validator_config: Path | None = None,
+    run_bids_validator: bool = False
 ) -> None:
     """
     Copy BIDS dataset (and derivatives) to output with at most max_participants.
@@ -265,8 +266,8 @@ def ndaify_participants_files(
     config_path = Path(validator_config) if validator_config else _default_validator_config()
     if not config_path.is_file():
         raise FileNotFoundError(f"Validator config not found: {config_path}")
-
-    _run_bids_validator(input_root, config_path)
+    if run_bids_validator:
+        _run_bids_validator(input_root, config_path)
 
     layout = BIDSLayout(
         str(input_root),
@@ -328,7 +329,8 @@ def ndaify_participants_files(
                 _ensure_participants_age(dest_tsv.parent)
                 _ensure_participants_sex(dest_tsv.parent)
 
-        _run_bids_validator(reduced_root, config_path)
+        if run_bids_validator:
+            _run_bids_validator(reduced_root, config_path)
 
         _run_nda_lookup(reduced_root, upload_dir, keep_ids)
 

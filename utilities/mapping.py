@@ -100,7 +100,7 @@ class MappingTemplator:
             "scan_object": "Other",
             "image_modality": "Other",
             "transformation_performed": "No",
-            "image_file_format": "NIfTI",
+            "image_file_format": "DICOM",
         }
         out_path = Path(self.destination_path) / "image03_sourcedata.bids.toplevel.yaml"
         with open(out_path, "w") as f:
@@ -181,7 +181,7 @@ class MappingTemplator:
                 "scan_object": "Live",
                 "image_modality": "MRI",
                 "transformation_performed": "No",
-                "image_file_format": "NIFTI",
+                "image_file_format": "DICOM",
             },
             "pet": {
                 "image_description": "PET",
@@ -189,7 +189,7 @@ class MappingTemplator:
                 "scan_object": "Live",
                 "image_modality": "PET",
                 "transformation_performed": "No",
-                "image_file_format": "NIFTI",
+                "image_file_format": "DICOM",
             },
         }
 

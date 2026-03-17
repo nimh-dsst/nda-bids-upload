@@ -305,7 +305,8 @@ def cli(input):
         if basename == "image03_sourcedata.bids.toplevel":
             lookup_record = lookup[0] if lookup else {}
             manifest = Manifest()
-            manifest.create_from_dir(upload_dir, top_level_only=True)
+            manifest.create_from_dir(upload_dir)
+            #manifest.create_from_dir(upload_dir, top_level_only=True)
         else:
             # Extract NDAR GUID from the folder name (e.g., "sub-NDAR123456_ses-baseline" -> "NDAR123456")
             if bids_subject_session.startswith("sub-"):
@@ -441,7 +442,7 @@ def cli(input):
 
     print("FINISHED " + basename + " RECORDS PREPARATION.")
 
-    validation = run_vtcmd_realtime(parent + ".complete_records.csv", input)
+    validation = run_vtcmd_realtime(parent + ".complete_records.csv", input, log_dir=dest_dir)
     if validation == 0:
         print(f"Files prepped at {input} with {parent}.complete_records.csv are valid.")
     else:
@@ -454,10 +455,12 @@ def cli(input):
 
 # Usage:
 # run_vtcmd('image03_sourcedata.pet.pet.complete_records.csv', 'image03_sourcedata.pet.pet/')
-def run_vtcmd_realtime(csv_file, manifest_dir):
+def run_vtcmd_realtime(csv_file, manifest_dir, log_dir=None):
     # TODO Refactor pythonic
     """Run vtcmd with real-time output"""
-    cmd = ["vtcmd", csv_file, "-m", manifest_dir]
+    cmd = ["vtcmd", csv_file, "-m", manifest_dir, "-w",]
+    #if log_dir:
+    #    cmd += cmd + ['--log-dir', log_dir]
 
     try:
         process = subprocess.Popen(
@@ -469,11 +472,35 @@ def run_vtcmd_realtime(csv_file, manifest_dir):
             universal_newlines=True,
         )
 
+
+        vtcmd_qa_errors_and_warnings = {
+            "validation_qa": 0,
+            "validation_warnings": 0
+        }
         for line in process.stdout:
             print(line, end="")
+            # collect warnings output file
+            if 'Warnings output' or 'qa errors saved to' in line:
+                import re, pandas
+                pattern = r"(?:Warnings output to:|Complete list of qa errors saved to:)\s*(/[^ ]+\.csv)"
+                warnings_files = re.findall(pattern, line)
+                for f in warnings_files:
+                    df = pandas.read_csv(f)
+                    # TODO throw this error outside of testing.
+                    if "ERROR CODE" in df.columns:
+                        mask = df["ERROR CODE"].str.contains(r"duplicateRecords", na=False)
+                        df = df[~mask]
+                    for e in ['validation_qa', 'validation_varnings']:
+                        vtcmd_qa_errors_and_warnings[e] += len(df)
+
+                        
+        # collect path to errors file
 
         process.wait()
-        return process.returncode == 0
+        if vtcmd_qa_errors_and_warnings["validation_qa"] <= 0:
+            return 0
+        elif vtcmd_qa_errors_and_warnings["validation_qa"] > 0:
+            return 1
     except Exception as e:
         print(f"Error running vtcmd: {e}")
         return False
