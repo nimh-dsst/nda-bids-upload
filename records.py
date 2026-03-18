@@ -497,9 +497,9 @@ def run_vtcmd_realtime(csv_file, manifest_dir, log_dir=None):
         # collect path to errors file
 
         process.wait()
-        if vtcmd_qa_errors_and_warnings["validation_qa"] <= 0:
+        if len(vtcmd_qa_errors_and_warnings["validation_qa"]) <= 0:
             return 0
-        elif vtcmd_qa_errors_and_warnings["validation_qa"] > 0:
+        elif len(vtcmd_qa_errors_and_warnings["validation_qa"]) > 0:
             return 1
     except Exception as e:
         print(f"Error running vtcmd: {e}")
