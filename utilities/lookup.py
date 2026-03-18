@@ -48,11 +48,12 @@ class LookUpTable:
                 with open(participants_json_path, "r") as infile:
                     self.participants_json = json.load(infile)
             except (FileExistsError, FileNotFoundError, json.JSONDecodeError) as err:
-                if err is json.JSONDecodeError:
+                if isinstance(err, json.JSONDecodeError):
                     raise err
                 else:
-                    print(f"No participants.json file found.")
-                    self.participants_json = {}
+                    raise FileNotFoundError(
+                        f"participants.json not found: {participants_json_path}"
+                    ) from err
 
         # convert ages from years to months per NDA requirements
         age_multiplier = 12
@@ -78,7 +79,9 @@ class LookUpTable:
             self.participants_tsv = self.participants_tsv.rename(
                 columns={gender_col: "sex"}
             )
-            self.participants_json["sex"] = self.participants_json.pop(gender_col)
+
+            self.participants_json["sex"] = self.participants_json[gender_col]
+            self.participants_json.pop(gender_col)
 
         # create a subject/session list
         for s in self.subject_list:
@@ -93,12 +96,16 @@ class LookUpTable:
                     "subjectkey": "",
                     "src_subject_id": f"sub-{s}",
                     "interview_date": "",
-                    "interview_age": floor(
-                        age_multiplier * float(self.participants_tsv["age"][f"sub-{s}"])
-                    ),
-                    "sex": self.participants_tsv["sex"][f"sub-{s}"],
                     "datatype": ents.get("datatype", ""),
                 }
+                for possible in [('interview_age', 99), ('sex', 'F'), ('weight', 99)]:
+                    try:
+                        info[possible[0]] = self.participants_tsv[possible[0]][f"sub-{s}"]
+                        if possible[0] == 'interview_age':
+                            info[possible[0]] = info[possible[0]] * 12
+                    except KeyError:
+                        info[possible[0]] = possible[1]
+
                 # We're ignoring folders that don't have a datatype for now as their
                 # contents are covered by folders that do have a datatype
                 if info.get("datatype"):

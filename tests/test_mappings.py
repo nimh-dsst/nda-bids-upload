@@ -16,17 +16,15 @@ Mapping examples (from nda_ds004869) used in this module:
    ... recording-manual_blood.json and .tsv ...}
 """
 
-import pytest
-import bids
 import json
 import yaml
 
 from pathlib import Path
-from utilities.mapping import create_jsons, create_yamls
+from utilities.mapping import MappingTemplator
 
 # collect bids layout object from test data
 def test_bids_example_json_mappings(pet002_copy):
-    json_mapping_paths = create_jsons(pet002_copy.bids_dir, pet002_copy.upload_dir)
+    json_mapping_paths = MappingTemplator(pet002_copy.bids_dir, pet002_copy.upload_dir).create_jsons()
     assert len(json_mapping_paths) > 0
     assert all([Path(j).exists() for j in json_mapping_paths])
     for j in json_mapping_paths:
@@ -35,7 +33,7 @@ def test_bids_example_json_mappings(pet002_copy):
             assert type(json_mapping) is dict
     
 def test_bids_example_yaml_mappings(pet002_copy):
-    yaml_mapping_paths = create_yamls(pet002_copy.bids_dir, pet002_copy.upload_dir)
+    yaml_mapping_paths = MappingTemplator(pet002_copy.bids_dir, pet002_copy.upload_dir).create_yamls()
     assert len(yaml_mapping_paths) > 0
     assert all([Path(j).exists() for j in yaml_mapping_paths])
     for y in yaml_mapping_paths:
