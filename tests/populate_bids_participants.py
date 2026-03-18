@@ -272,7 +272,7 @@ def ndaify_participants_files(
     layout = BIDSLayout(
         str(input_root),
         validate=False,
-        derivatives=True,
+        derivatives=False,
     )
     keep_ids = _get_keep_subjects(layout, max_participants)
     if not keep_ids:

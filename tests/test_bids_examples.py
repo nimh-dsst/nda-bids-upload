@@ -7,9 +7,6 @@ no example datasets (e.g. pet002) are present. Run `make submodules` first.
 import sys
 import tempfile
 from pathlib import Path
-import subprocess
-import shutil
-
 import pytest
 
 # Folder names under bids-examples to skip (e.g. "code", "tools").
@@ -95,6 +92,21 @@ def test_bids_examples_submodule_loaded(bids_examples_available):
     )
 
 
+def pytest_generate_tests(metafunc):
+    if "dataset_path" in metafunc.fixturenames:
+        root = _bids_examples_path()
+        if not root.is_dir():
+            metafunc.parametrize("dataset_path", [])
+            return
+        
+        datasets = list(_bids_dataset_dirs(root))
+        metafunc.parametrize(
+            "dataset_path",
+            datasets,
+            ids=[p.name for p in datasets]
+        )
+
+
 def test_pet002_example_present(bids_examples_available):
     """pet002 example dataset exists and has expected BIDS layout."""
     root = bids_examples_available
@@ -104,7 +116,7 @@ def test_pet002_example_present(bids_examples_available):
     assert (pet002 / "participants.tsv").is_file() or (pet002 / "dataset_description.json").is_file()
 
 
-def test_lookup_table_per_bids_dataset(bids_examples_available):
+def test_bids_examples_to_nda(bids_examples_available, dataset_path):
     """Per dataset: temp folder -> reduce -> lookup on reduced -> update lookup.csv with GUIDs/dates; assert success."""
     from populate_bids_participants import (
         ndaify_participants_files,
@@ -114,68 +126,36 @@ def test_lookup_table_per_bids_dataset(bids_examples_available):
     from utilities.mapping import MappingTemplator
     from prepare import input_check, filemap_and_recordsprep
 
-    # 1. Collect list of folders from bids-examples
-    root = bids_examples_available
-    datasets = list(_bids_dataset_dirs(root))
-    if not datasets:
-        pytest.skip("no dataset folders in bids-examples")
-
-    for dataset_path in datasets:
-        name = dataset_path.name
-        # 2. Create a temporary folder for only this single dataset
-        with tempfile.TemporaryDirectory() as tmp:
-            target_path = Path(tmp)
-            reduced_bids_dataset = target_path / f"{name}_reduced"
-            nda_upload_directory = reduced_bids_dataset / "upload"
-            nda_upload_directory.mkdir(parents=True,exist_ok=True)
-            # 3. Run reduce_bids_participants on this dataset; target path is within the temp folder.
-            #    (This reduces the dataset and writes the reduced BIDS tree into target_path.)
-            try:
-                ndaify_participants_files(
-                    dataset_path, reduced_bids_dataset, max_participants=10
-                )
-            except InvalidDatasetError as e:
-                # If bids-validator fails to run (network/proxy/cache issues),
-                # skip validation for this dataset but continue the loop so
-                # that remaining pipeline tests still run on other datasets.
-                msg = str(e)
-                if "bids-validator failed" in msg:
-                    # Log by attaching to the assertion message if nothing
-                    # else runs for this dataset.
-                    # Just continue to the next dataset without raising.
-                    continue
-                raise
-            # 5. lookup.csv was updated with conftest GUIDS and generated interview dates (inside reduce_bids).
-            assert (nda_upload_directory / "lookup.csv").is_file(), (
-                f"dataset {name}: expected lookup.csv after reduce + lookup"
+    name = dataset_path.name
+    # 1. Create a temporary folder for only this single dataset
+    with tempfile.TemporaryDirectory() as tmp:
+        target_path = Path(tmp)
+        reduced_bids_dataset = target_path / f"{name}_reduced"
+        nda_upload_directory = reduced_bids_dataset / "upload"
+        nda_upload_directory.mkdir(parents=True,exist_ok=True)
+        # 2. Run reduce_bids_participants on this dataset; target path is within the temp folder.
+        #    (This reduces the dataset and writes the reduced BIDS tree into target_path.)
+        try:
+            ndaify_participants_files(
+                dataset_path, reduced_bids_dataset, max_participants=10
             )
-            # 6. Generate file mapping
-            mapping = MappingTemplator(reduced_bids_dataset, nda_upload_directory)
-    
-            # 7. Run prepare.py
-            # dest_dir, manifest_script, source_dir, skip, = input_check()
-            filemap_and_recordsprep(nda_upload_directory, reduced_bids_dataset, False)
-            print("pause")
+        except InvalidDatasetError as e:
+            # If bids-validator fails to run (network/proxy/cache issues),
+            # skip validation for this dataset but continue the loop so
+            # that remaining pipeline tests still run on other datasets.
+            msg = str(e)
+            if "bids-validator failed" in msg:
+                # Log by attaching to the assertion message if nothing
+                # else runs for this dataset.
+                # Just continue to the next dataset without raising.
+                pass
+            raise
+        # 3. lookup.csv was updated with conftest GUIDS and generated interview dates (inside reduce_bids).
+        assert (nda_upload_directory / "lookup.csv").is_file(), (
+            f"dataset {name}: expected lookup.csv after reduce + lookup"
+        )
+        # 4. Generate file mapping
+        mapping = MappingTemplator(reduced_bids_dataset, nda_upload_directory)
 
-            # 8. Additionally, run vtcmd explicitly on the generated
-            # NDA records for this dataset, if vtcmd is available.
-            #project_root = _project_root()
-            #venv_vtcmd = project_root / ".venv" / "bin" / "vtcmd"
-            #if venv_vtcmd.is_file():
-            #   vtcmd_exe = str(venv_vtcmd)
-            #else:
-            #    vtcmd_exe = shutil.which("vtcmd")
-
-            #if vtcmd_exe:
-            #    dest_path = nda_upload_directory
-            #    for records_csv in dest_path.glob("*.complete_records.csv"):
-            #        result = subprocess.run(
-            #            [vtcmd_exe, str(records_csv), "-m", str(records_csv.parent)],
-            #            capture_output=True,
-            #            text=True,
-            #        )
-            #        assert (
-            #            result.returncode == 0
-            #        ), f"vtcmd failed on {records_csv}:\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-
-
+        # 5. Run prepare.py
+        filemap_and_recordsprep(nda_upload_directory, reduced_bids_dataset, False)
